@@ -30,7 +30,7 @@ wikipedia.set_lang('uz')
 logging.basicConfig(level=logging.INFO)
 
 bot = Bot(token=API_TOKEN)
-dp = Dispatcher(bot)
+dp = Dispatcher()
 
 @dp.message_handler(commands=['start', 'help'])
 async def send_welcome(message: types.Message):
@@ -97,3 +97,4 @@ async def handle_message(message: types.Message):
 if __name__ == '__main__':
     print("🤖 Bot ishga tushmoqda...")
     executor.start_polling(dp, skip_updates=True)
+
