@@ -2,14 +2,29 @@ import os
 import logging
 import wikipedia
 from aiogram import Bot, Dispatcher, types
-from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
-from aiohttp import web
+from aiogram import executor
+from flask import Flask
+from threading import Thread
+
+# Flask server for 24/7 (UptimeRobot uchun)
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "🤖 Wikipedia Bot is running!"
+
+def run():
+    app.run(host='0.0.0.0', port=8080)
+
+def keep_alive():
+    t = Thread(target=run)
+    t.start()
+
+# Start Flask server
+keep_alive()
 
 # Environment variables
 API_TOKEN = os.getenv('BOT_TOKEN')
-RAILWAY_STATIC_URL = os.getenv('RAILWAY_STATIC_URL')  # Railway avtomatik beradi
-WEBHOOK_PATH = '/webhook'
-WEBHOOK_URL = f"{RAILWAY_STATIC_URL}{WEBHOOK_PATH}" if RAILWAY_STATIC_URL else None
 
 wikipedia.set_lang('uz')
 logging.basicConfig(level=logging.INFO)
@@ -20,8 +35,7 @@ dp = Dispatcher(bot)
 @dp.message_handler(commands=['start', 'help'])
 async def send_welcome(message: types.Message):
     welcome_text = (
-        "🤖 Wikipedia Bot (Railway)\n\n"
-        "✨ Railway hostingda 24/7 ishlaydi\n\n"
+        "🤖 Wikipedia Bot\n\n"
         "Mavzu nomini yuboring!\n\n"
         "📚 Misollar:\n"
         "• Namangan\n• Python\n• Alisher Navoiy\n• Matematika"
@@ -30,16 +44,17 @@ async def send_welcome(message: types.Message):
 
 @dp.message_handler(commands=['status'])
 async def status_command(message: types.Message):
-    await message.answer("✅ Bot Railway da 24/7 ishlayapti!")
+    await message.answer("✅ Bot ishlayapti!")
 
 @dp.message_handler(commands=['mavzular'])
 async def topics_command(message: types.Message):
     topics_text = (
         "🧭 Mavzu misollari:\n\n"
-        "🏛️ Shaharlar: Namangan, Andijon, Farg'ona\n"
+        "🏛 Shaharlar: Namangan, Andijon, Farg'ona\n"
         "👨‍🎓 Shaxslar: Alisher Navoiy, Amir Temur\n"
         "🔬 Fan: Python, Matematika, Fizika\n"
         "🌍 Davlatlar: O'zbekiston, Qozog'iston"
+        "18+ savollarga javob yo'q"
     )
     await message.answer(topics_text)
 
@@ -77,34 +92,8 @@ async def handle_message(message: types.Message):
     if result:
         await message.answer(result)
     else:
-        await message.answer("❌ Ma'lumot topilmadi!To'g'ri ma'lumot yozsangchi")
-
-# Webhook sozlamalari
-async def on_startup(app):
-    if WEBHOOK_URL:
-        await bot.set_webhook(WEBHOOK_URL)
-        print(f"✅ Webhook sozlandi: {WEBHOOK_URL}")
-    else:
-        print("⚠️ WEBHOOK_URL topilmadi")
-
-async def on_shutdown(app):
-    await bot.session.close()
-    print("🔴 Bot to'xtatildi")
-
-# Aiohttp app
-app = web.Application()
-app.on_startup.append(on_startup)
-app.on_shutdown.append(on_shutdown)
-
-# Webhook handler
-webhook_requests_handler = SimpleRequestHandler(dispatcher=dp, bot=bot)
-webhook_requests_handler.register(app, path=WEBHOOK_PATH)
-
-setup_application(app, dp, bot=bot)
+        await message.answer("❌ Ma'lumot topilmadi! To'g'ri ma'lumot yozsangchi")
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 10000))
-    print(f"🚀 Bot {port}-portda ishga tushmoqda...")
-    web.run_app(app, host='0.0.0.0', port=port)
-
-
+    print("🤖 Bot ishga tushmoqda...")
+    executor.start_polling(dp, skip_updates=True)
