@@ -7,7 +7,9 @@ from aiohttp import web
 
 # Environment variables
 API_TOKEN = os.getenv('BOT_TOKEN')
-WEBHOOK_URL = os.getenv('WEBHOOK_URL')  # Render tomonidan beriladi
+RAILWAY_STATIC_URL = os.getenv('RAILWAY_STATIC_URL')  # Railway avtomatik beradi
+WEBHOOK_PATH = '/webhook'
+WEBHOOK_URL = f"{RAILWAY_STATIC_URL}{WEBHOOK_PATH}" if RAILWAY_STATIC_URL else None
 
 wikipedia.set_lang('uz')
 logging.basicConfig(level=logging.INFO)
@@ -15,23 +17,20 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot)
 
-
 @dp.message_handler(commands=['start', 'help'])
 async def send_welcome(message: types.Message):
     welcome_text = (
-        "🤖 Wikipedia Bot (Render)\n\n"
-        "✨ Render hostingda 24/7 ishlaydi\n\n"
+        "🤖 Wikipedia Bot (Railway)\n\n"
+        "✨ Railway hostingda 24/7 ishlaydi\n\n"
         "Mavzu nomini yuboring!\n\n"
         "📚 Misollar:\n"
         "• Namangan\n• Python\n• Alisher Navoiy\n• Matematika"
     )
     await message.reply(welcome_text)
 
-
 @dp.message_handler(commands=['status'])
 async def status_command(message: types.Message):
-    await message.answer("✅ Bot Render da 24/7 ishlayapti!")
-
+    await message.answer("✅ Bot Railway da 24/7 ishlayapti!")
 
 @dp.message_handler(commands=['mavzular'])
 async def topics_command(message: types.Message):
@@ -44,11 +43,10 @@ async def topics_command(message: types.Message):
     )
     await message.answer(topics_text)
 
-
 def smart_search(query):
     """Aqlli ko'p tilli qidiruv"""
     languages = [('uz', "🇺🇿 O'zbekcha"), ('ru', "🇷🇺 Ruscha"), ('en', "🇺🇸 Inglizcha")]
-
+    
     for lang_code, lang_name in languages:
         try:
             wikipedia.set_lang(lang_code)
@@ -62,38 +60,36 @@ def smart_search(query):
             continue
         except Exception:
             continue
-
+    
     return None
-
 
 @dp.message_handler()
 async def handle_message(message: types.Message):
     user_text = message.text.strip()
-
+    
     if not user_text or user_text.startswith('/'):
         return
-
-    await message.answer("🔍 3 tilda qidirilmoqda...")
-
+    
+    await message.answer("🔍 Qidirilmoqda...")
+    
     result = smart_search(user_text)
-
+    
     if result:
         await message.answer(result)
     else:
-        await message.answer("❌ Ma'lumot topilmadi!")
-
+        await message.answer("❌ Ma'lumot topilmadi!To'g'ri ma'lumot yozsangchi")
 
 # Webhook sozlamalari
 async def on_startup(app):
-    await bot.set_webhook(WEBHOOK_URL)
-    print(f"✅ Webhook sozlandi: {WEBHOOK_URL}")
-
+    if WEBHOOK_URL:
+        await bot.set_webhook(WEBHOOK_URL)
+        print(f"✅ Webhook sozlandi: {WEBHOOK_URL}")
+    else:
+        print("⚠️ WEBHOOK_URL topilmadi")
 
 async def on_shutdown(app):
-    await bot.delete_webhook()
     await bot.session.close()
-    print("❌ Webhook o'chirildi")
-
+    print("🔴 Bot to'xtatildi")
 
 # Aiohttp app
 app = web.Application()
@@ -102,10 +98,11 @@ app.on_shutdown.append(on_shutdown)
 
 # Webhook handler
 webhook_requests_handler = SimpleRequestHandler(dispatcher=dp, bot=bot)
-webhook_requests_handler.register(app, path='/webhook')
+webhook_requests_handler.register(app, path=WEBHOOK_PATH)
 
 setup_application(app, dp, bot=bot)
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
+    port = int(os.environ.get('PORT', 10000))
+    print(f"🚀 Bot {port}-portda ishga tushmoqda...")
     web.run_app(app, host='0.0.0.0', port=port)
