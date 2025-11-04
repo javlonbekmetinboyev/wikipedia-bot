@@ -15,7 +15,7 @@ wikipedia.set_lang('uz')
 logging.basicConfig(level=logging.INFO)
 
 bot = Bot(token=API_TOKEN)
-dp = Dispatcher(bot)
+dp = Dispatcher()
 
 @dp.message_handler(commands=['start', 'help'])
 async def send_welcome(message: types.Message):
@@ -106,3 +106,4 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
     print(f"🚀 Bot {port}-portda ishga tushmoqda...")
     web.run_app(app, host='0.0.0.0', port=port)
+
